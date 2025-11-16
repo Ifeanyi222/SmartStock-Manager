@@ -1,0 +1,27 @@
+{% extends 'sales_record/base.html' %}
+{% block content %}
+
+<div class="form-container">
+  <h2>🔐 Login</h2>
+
+  <form method="POST">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="username">Username:</label>
+      <input type="text" id="username" name="username" required>
+    </div>
+
+    <div class="mb-3">
+      <label for="password">Password:</label>
+      <input type="password" id="password" name="password" required>
+    </div>
+
+    <button type="submit">Login</button>
+  </form>
+
+  {% for message in messages %}
+    <p class="message" style="color:red;">{{ message }}</p>
+  {% endfor %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,193 @@
+{% extends 'sales_record/base.html' %}
+{% load static %}
+{% block content %}
+
+<div class="container mt-4">
+
+  <!-- 🧭 Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">📊 SmartStock Dashboard</h2>
+    {% if role == 'manager' %}
+    <div>
+      <a href="{% url 'add_stock' %}" class="btn btn-primary btn-sm me-2">➕ Add Stock</a>
+      <a href="{% url 'register' %}" class="btn btn-success btn-sm">👥 Register Staff</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- 🔍 Search -->
+  <form id="search-form" method="get" action="" class="mb-4">
+    <div class="input-group shadow-sm">
+      <input
+        type="text"
+        id="search-input"
+        name="q"
+        class="form-control"
+        placeholder="Search by brand, model, ref no, or supplier..."
+        value="{{ query|default:'' }}"
+      >
+      <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+    </div>
+  </form>
+
+  <!-- ⚠️ Low Stock Alert -->
+  {% if low_stock_products %}
+  <div class="alert alert-danger border-danger shadow-sm">
+    <h5 class="fw-bold mb-2">⚠️ Low Stock Alert</h5>
+    <ul class="mb-0 ps-3">
+      {% for product in low_stock_products %}
+        <li>{{ product.brand }} – {{ product.model_name }} ({{ product.quantity }} left)</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <div id="dashboard-tables">
+
+    <!-- 📦 Product Table -->
+    <h4 class="fw-semibold mt-4 mb-3">📦 Available Products</h4>
+    <div class="table-responsive shadow-sm rounded">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Brand</th>
+            <th>Model</th>
+            <th>Ref No</th>
+            <th>Category</th>
+            <th>Supplier</th>
+            <th>Condition</th>
+            <th>Qty</th>
+            <th>Purchase Price (₦)</th>
+            <th>Selling Price (₦)</th>
+            <th>Remark</th>
+            {% if role == 'manager' %}<th>Actions</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in products %}
+          <tr>
+            <td>{{ p.brand }}</td>
+            <td>{{ p.model_name }}</td>
+            <td>{{ p.ref_no }}</td>
+            <td>{{ p.category|default:"—" }}</td>
+            <td>{{ p.supplier|default:"—" }}</td>
+            <td>
+              {% if p.condition == 'new' %}
+                <span class="badge bg-success">New</span>
+              {% else %}
+                <span class="badge bg-secondary">Used</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if p.quantity <= 5 %}
+                <span class="badge bg-danger">{{ p.quantity }}</span>
+              {% else %}
+                {{ p.quantity }}
+              {% endif %}
+            </td>
+            <td>{{ p.purchase_price|floatformat:2|default:"—" }}</td>
+            <td>₦{{ p.selling_price|floatformat:2 }}</td>
+            <td>{{ p.remark|default:"—" }}</td>
+            {% if role == 'manager' %}
+            <td>
+              <a href="{% url 'edit_stock' p.id %}" class="btn btn-sm btn-outline-primary">✏️</a>
+              <a href="{% url 'delete_stock' p.id %}" class="btn btn-sm btn-outline-danger">🗑️</a>
+            </td>
+            {% endif %}
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="{% if role == 'manager' %}11{% else %}10{% endif %}" class="text-center text-muted py-3">
+              No products found 😕
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 💰 Sales Section -->
+    <h4 class="fw-semibold mt-5 mb-3">💰 Recent Sales</h4>
+    <div class="table-responsive shadow-sm rounded">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Date</th>
+            <th>Invoice #</th>
+            <th>Customer</th>
+            <th>Sold By</th>
+            <th>Products</th>
+            <th>Quantities</th>
+            <th>Remarks</th>
+            <th>Total (₦)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sale in sales %}
+          <tr>
+            <td>{{ sale.date|date:"Y-m-d H:i" }}</td>
+            <td>{{ sale.invoice_number|default:"—" }}</td>
+            <td>{{ sale.customer_name|default:"—" }}</td>
+            <td>{{ sale.user.username }}</td>
+            <td>
+              <ul class="mb-0 ps-3">
+                {% for item in sale.items.all %}
+                <li>{{ item.product.brand }} - {{ item.product.model_name }}</li>
+                {% endfor %}
+              </ul>
+            </td>
+            <td>
+              <ul class="mb-0 ps-3">
+                {% for item in sale.items.all %}
+                <li>{{ item.quantity }}</li>
+                {% endfor %}
+              </ul>
+            </td>
+            <td>
+              <ul class="mb-0 ps-3">
+                {% for item in sale.items.all %}
+                <li>{{ item.remark|default:"—" }}</li>
+                {% endfor %}
+              </ul>
+            </td>
+            <td><strong>₦{{ sale.total_amount|floatformat:2 }}</strong></td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-3">No sales recorded yet 📉</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- 🧠 AJAX Search Script -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('search-input');
+  const dashboard = document.getElementById('dashboard-tables');
+  let timeout = null;
+
+  input.addEventListener('input', () => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      const query = input.value.trim();
+      dashboard.innerHTML = "<div class='text-center py-4 text-muted'>⏳ Searching...</div>";
+
+      fetch(`{% url 'search_dashboard' %}?q=${encodeURIComponent(query)}`)
+        .then(res => res.json())
+        .then(data => {
+          dashboard.innerHTML = data.html;
+        })
+        .catch(() => {
+          dashboard.innerHTML = "<div class='text-center text-danger py-4'>❌ Error loading search results.</div>";
+        });
+    }, 400);
+  });
+});
+</script>
+
+{% endblock %}

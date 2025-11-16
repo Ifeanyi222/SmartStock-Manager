@@ -1,0 +1,92 @@
+{% comment %}
+This partial template is dynamically loaded by AJAX (search-dashboard view).
+It shows low-stock alerts, products, and sales tables.
+{% endcomment %}
+
+<!-- ⚠️ Low Stock Alert -->
+{% if low_stock_products %}
+  <div style="background-color:#ffdddd; border:1px solid #ff0000; padding:10px; margin-bottom:20px;">
+    <h3>⚠️ Low Stock Alert!</h3>
+    <ul>
+      {% for product in low_stock_products %}
+        <li>
+          <strong>{{ product.brand }} - {{ product.model_name }}</strong>
+          ({{ product.quantity }} left)
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
+<!-- 📦 Product Table -->
+<h2>Available Products</h2>
+<table class="table table-bordered table-striped">
+  <thead class="table-light">
+    <tr>
+      <th>Brand</th>
+      <th>Model</th>
+      <th>Ref No</th>
+      <th>Qty</th>
+      <th>Selling Price (₦)</th>
+      <th>Remark</th>
+      {% if role == 'manager' %}<th>Actions</th>{% endif %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in products %}
+    <tr>
+      <td>{{ p.brand }}</td>
+      <td>{{ p.model_name }}</td>
+      <td>{{ p.ref_no }}</td>
+      <td>{{ p.quantity }}</td>
+      <td>{{ p.selling_price|floatformat:2 }}</td>
+      <td>{{ p.remark }}</td>
+      {% if role == 'manager' %}
+      <td>
+        <a href="{% url 'edit_stock' p.id %}" class="btn btn-sm btn-primary">✏️ Edit</a>
+        <a href="{% url 'delete_stock' p.id %}" class="btn btn-sm btn-danger">🗑️ Delete</a>
+      </td>
+      {% endif %}
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="{% if role == 'manager' %}7{% else %}6{% endif %}" class="text-center">No stock found.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- 💰 Sales Table -->
+<h2 class="mt-4">Recent Sales</h2>
+<table class="table table-bordered table-striped">
+  <thead class="table-light">
+    <tr>
+      <th>Date</th>
+      <th>Customer</th>
+      <th>Sold By</th>
+      <th>Items</th>
+      <th>Total (₦)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for sale in sales %}
+    <tr>
+      <td>{{ sale.date|date:"Y-m-d H:i" }}</td>
+      <td>{{ sale.customer_name|default:"—" }}</td>
+      <td>{{ sale.user.username|default:"—" }}</td>
+      <td>
+        <ul class="mb-0">
+          {% for item in sale.items.all %}
+          <li>{{ item.product.brand }} - {{ item.product.model_name }} (x{{ item.quantity }})</li>
+          {% endfor %}
+        </ul>
+      </td>
+      <td>₦{{ sale.total_amount|floatformat:2 }}</td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="5" class="text-center">No sales recorded.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

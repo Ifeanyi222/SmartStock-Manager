@@ -1,0 +1,96 @@
+{% extends 'sales_record/base.html' %}
+{% block content %}
+<div class="container my-4" id="receipt-root">
+  <div class="card p-3">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h3 class="mb-0">Your Store Name</h3>
+        <small>Address line 1 • Phone: 080x xxx xxxx</small>
+      </div>
+      <div style="text-align:right;">
+        <h5 class="mb-0">RECEIPT</h5>
+        <small>Receipt #: {{ sale.id }}</small><br>
+        <small>{{ sale.date|date:"Y-m-d H:i" }}</small>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- Attendant and meta -->
+    <!-- Attendant and meta -->
+    <div class="mb-2">
+        <strong>Attendant:</strong>
+        {% if sale.user %}
+            {{ sale.user.username }}
+        {% else %}
+            Unknown
+        {% endif %}
+    </div>
+
+
+
+    <!-- Items table -->
+    <table class="table table-sm" style="width:100%; border-collapse: collapse;">
+      <thead>
+        <tr style="border-bottom:1px solid #ccc;">
+          <th style="text-align:left;">Product</th>
+          <th style="text-align:right;">Price</th>
+          <th style="text-align:center;">Qty</th>
+          <th style="text-align:right;">Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in sale.items.all %}
+        <tr>
+          <td>{{ item.product.brand }} - {{ item.product.model }}</td>
+          <td style="text-align:right;">₦{{ item.price|floatformat:2 }}</td>
+          <td style="text-align:center;">{{ item.quantity }}</td>
+          <td style="text-align:right;">₦{{ item.quantity|floatformat:0|add:"0"|floatformat:0 }}{% comment %}helper{% endcomment %}{% with sub=item.quantity|floatformat:0|floatformat:"" %}{% endwith %}{% comment %}we'll compute below{% endcomment %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3" style="text-align:right;"><strong>Total:</strong></td>
+          <td style="text-align:right;"><strong>₦{{ sale.total_amount|floatformat:2 }}</strong></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <hr>
+
+    <div class="text-center small mb-3">
+      Thank you for shopping with us!
+    </div>
+
+    <!-- Buttons -->
+    <div class="d-flex gap-2 justify-content-end">
+      <button class="btn btn-secondary" onclick="window.print()">🖨️ Print</button>
+
+      <!-- PDF download only works if you enabled the server-side PDF view -->
+      <a href="{% url 'download_sale_pdf' sale.id %}" class="btn btn-primary" id="downloadPdfBtn">💾 Download PDF</a>
+
+      <a href="{% url 'dashboard' %}" class="btn btn-light">🏠 Back to Dashboard</a>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Print styles */
+@media print {
+  body * { visibility: hidden; }
+  #receipt-root, #receipt-root * { visibility: visible; }
+  #receipt-root { position: absolute; left: 0; top: 0; width: 100%; }
+  a { display: none; } /* hide links when printing */
+}
+
+/* Table tidy */
+.table-sm td, .table-sm th { padding: 6px; }
+</style>
+
+<script>
+// Optional: you may want to calculate subtotal values client-side if needed.
+// Currently receipts use server-side saved sale.total_amount and item.price/item.quantity stored in DB.
+</script>
+{% endblock %}
